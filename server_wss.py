@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 from pydantic_settings import BaseSettings
@@ -234,6 +235,9 @@ def asr(audio, lang, cache, use_itn=False):
 
 app = FastAPI()
 
+# 添加静态文件服务
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -272,6 +276,12 @@ class TranscriptionResponse(BaseModel):
     code: int
     info: str
     data: str
+
+@app.get("/")
+async def get_root():
+    with open("client_wss.html", "r", encoding="utf-8") as file:
+        html_content = file.read()
+    return HTMLResponse(content=html_content, status_code=200)
 
 @app.websocket("/ws/transcribe")
 async def websocket_endpoint(websocket: WebSocket):
@@ -387,9 +397,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the FastAPI app with a specified port.")
-    parser.add_argument('--port', type=int, default=27000, help='Port number to run the FastAPI app on.')
-    # parser.add_argument('--certfile', type=str, default='path_to_your_SSL_certificate_file.crt', help='SSL certificate file')
-    # parser.add_argument('--keyfile', type=str, default='path_to_your_SSL_certificate_file.key', help='SSL key file')
+    parser.add_argument('--port', type=int, default=7000, help='Port number to run the FastAPI app on.')
     args = parser.parse_args()
-    # uvicorn.run(app, host="0.0.0.0", port=args.port, ssl_certfile=args.certfile, ssl_keyfile=args.keyfile)
-    uvicorn.run(app, host="0.0.0.0", port=args.port)
+    
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=args.port)
